@@ -6,7 +6,8 @@ __pycache__/
 .env
 .venv/
 
-# 出力
-output/
+# 入力・出力データ
 data/*.mp4
 data/*.avi
+data/sample_frames/
+output/
