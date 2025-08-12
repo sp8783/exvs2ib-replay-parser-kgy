@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.pyc
+
+# 環境
+.env
+.venv/
+
+# 出力
+output/
+data/*.mp4
+data/*.avi
