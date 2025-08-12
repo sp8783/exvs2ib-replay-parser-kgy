@@ -1,5 +1,5 @@
 # フレーム抽出間隔（秒）
-frame_interval: 1
+frame_interval: 5
 
 # OCRで使用する言語
 ocr_lang: jpn+eng
