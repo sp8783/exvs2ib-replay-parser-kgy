@@ -33,14 +33,25 @@ def detect_screens(frame_paths):
             prev_type = screen_type
     return screens, match_count
 
-def extract_match_results(screens, match_count):
+def get_frame_timestamp(frame_path, frame_interval):
+    """
+    フレーム画像ファイル名から連番を取得し、frame_interval（秒）からタイムスタンプをhh:mm:ss形式で返す。
+    """
+    basename = os.path.basename(frame_path)
+    frame_num = int(basename.split("_")[1].split(".")[0])
+    total_seconds = int(frame_num * frame_interval)
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    seconds = total_seconds % 60
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+def extract_match_results(screens, match_count, frame_interval):
     """
     マッチング画面→リザルト画面のペアごとにOCRを実行し、
-    1試合分の情報（プレイヤー名・機体名・勝敗など）を辞書としてまとめてリストで返す
+    1試合分の情報（プレイヤー名・機体名・勝敗・開始タイムスタンプなど）を辞書としてまとめてリストで返す
     """
     results = []
     i = 0
-    print(match_count)
     pbar = tqdm(total=match_count, desc="試合情報抽出")
     while i < len(screens) - 1:
         if screens[i]["type"] == "matching" and screens[i+1]["type"] in ("result_win", "result_lose"):
@@ -61,7 +72,8 @@ def extract_match_results(screens, match_count):
                     "player3_result": "WIN",
                     "player4_result": "WIN"
                 }
-            row = {**match_info, **result_info}
+            match_timestamp = get_frame_timestamp(screens[i]["path"], frame_interval)
+            row = {**match_info, **result_info, "start_time": match_timestamp}
             results.append(row)
             i += 2
             pbar.update(1)
@@ -90,7 +102,7 @@ def main():
     args = parser.parse_args()
 
     config = load_config(args.config)
-
+    frame_interval = config["frame_interval"]
 
     frame_dir = args.frames
     frame_paths = sorted([
@@ -101,10 +113,10 @@ def main():
     if frame_paths:
         print(f"{len(frame_paths)}枚のフレーム画像が既に存在するため、抽出をスキップします。")
     else:
-        frame_paths = extract_frames(args.input, config["frame_interval"], frame_dir)
+        frame_paths = extract_frames(args.input, frame_interval, frame_dir)
 
     screens, match_count = detect_screens(frame_paths)
-    results = extract_match_results(screens, match_count)
+    results = extract_match_results(screens, match_count, frame_interval)
     save_to_csv(results, args.output)
 
 if __name__ == "__main__":

@@ -1,7 +1,6 @@
 import cv2
 import os
 from tqdm import tqdm
-from src.regions_matching import ocr_on_matching_regions
 
 def extract_frames(video_path, frame_interval_sec, output_dir):
     """
