@@ -97,13 +97,17 @@ def main():
     parser = argparse.ArgumentParser(description="EXVS2IB 戦績トラッカー")
     parser.add_argument("--input", required=True, help="入力動画ファイルのパス")
     parser.add_argument("--config", default="config/config.yaml", help="設定ファイルのパス")
-    parser.add_argument("--frames", default="output/frames", help="フレーム画像の保存先ディレクトリ")
     args = parser.parse_args()
 
     config = load_config(args.config)
     frame_interval = config["frame_interval"]
 
-    frame_dir = args.frames
+    input_basename = os.path.basename(args.input)
+    input_name, _ = os.path.splitext(input_basename)
+
+    frame_dir = os.path.join("output", "frames", input_name)
+    os.makedirs(frame_dir, exist_ok=True)
+
     frame_paths = sorted([
         os.path.join(frame_dir, f)
         for f in os.listdir(frame_dir)
@@ -117,8 +121,6 @@ def main():
     screens, match_count = detect_screens(frame_paths)
     results = extract_match_results(screens, match_count, frame_interval)
 
-    input_basename = os.path.basename(args.input)
-    input_name, _ = os.path.splitext(input_basename)
     output_dir = "output/results"
     output_path = os.path.join(output_dir, f"result_{input_name}.csv")
     save_to_csv(results, output_path)
