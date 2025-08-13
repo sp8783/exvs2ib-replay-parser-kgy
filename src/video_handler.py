@@ -1,6 +1,6 @@
 import cv2
 import os
-import yaml
+from tqdm import tqdm
 from src.regions_matching import ocr_on_matching_regions
 
 def extract_frames(video_path, frame_interval_sec, output_dir):
@@ -18,6 +18,9 @@ def extract_frames(video_path, frame_interval_sec, output_dir):
     saved_paths = []
     idx = 0
 
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    pbar = tqdm(total=total_frames, desc="フレーム抽出")
+
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -28,6 +31,8 @@ def extract_frames(video_path, frame_interval_sec, output_dir):
             saved_paths.append(frame_path)
             idx += 1
         frame_count += 1
+        pbar.update(1)
 
     cap.release()
+    pbar.close()
     return saved_paths
