@@ -3,6 +3,7 @@ import os
 import yaml
 import cv2
 import pandas as pd
+from tqdm import tqdm
 from src.video_handler import extract_frames
 from src.regions_matching import ocr_on_matching_regions
 from src.screen_classifier import classify_screen
@@ -20,20 +21,27 @@ def detect_screens(frame_paths):
     画面種別とパスのリストを返す
     """
     screens = []
-    for frame_path in frame_paths:
+    match_count = 0
+    prev_type = None
+    for frame_path in tqdm(frame_paths, desc="画面判定"):
         img = cv2.imread(frame_path)
         screen_type = classify_screen(img)
         if screen_type in ("matching", "result_win", "result_lose"):
             screens.append({"type": screen_type, "path": frame_path})
-    return screens
+            if prev_type == "matching" and screen_type in ("result_win", "result_lose"):
+                match_count += 1
+            prev_type = screen_type
+    return screens, match_count
 
-def extract_match_results(screens):
+def extract_match_results(screens, match_count):
     """
     マッチング画面→リザルト画面のペアごとにOCRを実行し、
     1試合分の情報（プレイヤー名・機体名・勝敗など）を辞書としてまとめてリストで返す
     """
     results = []
     i = 0
+    print(match_count)
+    pbar = tqdm(total=match_count, desc="試合情報抽出")
     while i < len(screens) - 1:
         if screens[i]["type"] == "matching" and screens[i+1]["type"] in ("result_win", "result_lose"):
             match_img = cv2.imread(screens[i]["path"])
@@ -56,8 +64,10 @@ def extract_match_results(screens):
             row = {**match_info, **result_info}
             results.append(row)
             i += 2
+            pbar.update(1)
         else:
             i += 1
+    pbar.close()
     return results
 
 def save_to_csv(results, output_path):
@@ -76,12 +86,25 @@ def main():
     parser.add_argument("--input", required=True, help="入力動画ファイルのパス")
     parser.add_argument("--output", default="output/results/results.csv", help="出力CSVファイルパス")
     parser.add_argument("--config", default="config/config.yaml", help="設定ファイルのパス")
+    parser.add_argument("--frames", default="output/frames", help="フレーム画像の保存先ディレクトリ")
     args = parser.parse_args()
 
     config = load_config(args.config)
-    frame_paths = extract_frames(args.input, config["frame_interval"], "output/frames")
-    screens = detect_screens(frame_paths)
-    results = extract_match_results(screens)
+
+
+    frame_dir = args.frames
+    frame_paths = sorted([
+        os.path.join(frame_dir, f)
+        for f in os.listdir(frame_dir)
+        if f.lower().endswith(".png")
+    ])
+    if frame_paths:
+        print(f"{len(frame_paths)}枚のフレーム画像が既に存在するため、抽出をスキップします。")
+    else:
+        frame_paths = extract_frames(args.input, config["frame_interval"], frame_dir)
+
+    screens, match_count = detect_screens(frame_paths)
+    results = extract_match_results(screens, match_count)
     save_to_csv(results, args.output)
 
 if __name__ == "__main__":
