@@ -4,7 +4,6 @@ import yaml
 import cv2
 import pandas as pd
 from src.video_handler import extract_frames
-from src.ocr_handler import run_ocr
 from src.regions_matching import ocr_on_matching_regions
 from src.screen_classifier import classify_screen
 

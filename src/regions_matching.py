@@ -51,7 +51,7 @@ def match_candidate(text, candidates):
     result = process.extractOne(text, candidates, score_cutoff=30)  # 閾値はテスト結果から低めに設定
     if result is None:
         return None
-    match, score, _ = result
+    match, _, _ = result
     return match
 
 def ocr_on_matching_regions(img):
@@ -61,13 +61,11 @@ def ocr_on_matching_regions(img):
     results = {}
     for key, (x1, y1, x2, y2) in regions.items():
         roi = frame[y1:y2, x1:x2]
-        # cv2.imwrite(f"output/debug/debug_{key}.png", roi) # デバッグ用に検出領域を保存
+        # cv2.imwrite(f"output/debug/debug_{key}.png", roi) # debug:検出領域を保存
         processed = preprocess_for_ocr(roi)
         text = pytesseract.image_to_string(processed, lang="jpn", config="--psm 7").strip()
         text = normalize_numbers(text)
-
-        print(f"OCR raw text [{key}]: {text}")
-
+        # print(f"OCR raw text [{key}]: {text}") # debug:OCR生テキスト
         if "name" in key:
             results[key] = match_candidate(text, player_candidates)
         else:
