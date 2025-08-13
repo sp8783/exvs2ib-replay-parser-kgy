@@ -16,16 +16,20 @@ regions = {
     "player4_unit": (1500, 796, 1860, 819),
 }
 
-# 候補リスト読み込み
 def load_candidates(path):
+    """
+    指定したCSVファイルから候補リスト（1列目）を読み込んでリストで返す。
+    """
     with open(path, encoding="utf-8") as f:
         return [row[0] for row in csv.reader(f) if row]
 
 player_candidates = load_candidates("data/player_names.csv")
 unit_candidates = load_candidates("data/unit_names.csv")
 
-# 丸数字などの数字を通常の数字に変換
 def normalize_numbers(text):
+    """
+    丸数字など特殊な数字表記を通常の数字に変換する。
+    """
     if not text:
         return text
     replacements = {
@@ -44,8 +48,11 @@ def normalize_numbers(text):
         text = text.replace(k, v)
     return text
 
-# 文字列を候補リストから最も近いものにマッチング
 def match_candidate(text, candidates):
+    """
+    OCRで得たテキストを候補リストから最も近いものにマッチングして返す。
+    閾値以下の場合はNoneを返す。
+    """
     if not text:
         return None
     result = process.extractOne(text, candidates, score_cutoff=30)  # 閾値はテスト結果から低めに設定
@@ -55,6 +62,10 @@ def match_candidate(text, candidates):
     return match
 
 def ocr_on_matching_regions(img):
+    """
+    マッチング画面画像から各領域を切り出し、OCR・候補マッチングを行い、
+    プレイヤー名・機体名を辞書で返す。
+    """
     frame = img
     if frame is None:
         raise FileNotFoundError(f"Image not found at {img}")

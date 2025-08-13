@@ -4,6 +4,10 @@ ref_point = []
 cropping = False
 
 def shape_selection(event, x, y, flags, param):
+    """
+    マウス操作で画像上の矩形領域を選択するためのコールバック関数。
+    左クリックで始点、ドラッグで矩形表示、離すと終点を記録し座標を表示する。
+    """
     global ref_point, cropping, img
 
     if event == cv2.EVENT_LBUTTONDOWN:

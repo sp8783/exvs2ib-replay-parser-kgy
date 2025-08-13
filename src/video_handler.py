@@ -4,6 +4,9 @@ import yaml
 from src.regions_matching import ocr_on_matching_regions
 
 def extract_frames(video_path, frame_interval_sec, output_dir):
+    """
+    動画ファイルから指定間隔ごとにフレーム画像を抽出し、保存パスのリストを返す。
+    """
     os.makedirs(output_dir, exist_ok=True)
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
