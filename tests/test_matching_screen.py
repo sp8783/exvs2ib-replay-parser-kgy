@@ -3,6 +3,9 @@ import glob
 from src.regions_matching import ocr_on_matching_regions
 
 def main():
+    """
+    マッチング画面画像を一括でOCR解析し、各領域の認識結果を表示するテスト関数。
+    """
     img_folder = "data/sample_frames/matching/"
     img_paths = glob.glob(img_folder + "*.png")
     if not img_paths:

@@ -2,6 +2,11 @@ import cv2
 import numpy as np
 
 def preprocess_for_ocr(img):
+    """
+    OCR用に画像を前処理する関数。
+    グレースケール化、拡大、コントラスト強調、二値化、ノイズ除去を行い、
+    認識精度を向上させた画像を返す。
+    """
     # グレースケール
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     

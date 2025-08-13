@@ -4,6 +4,10 @@ import os
 from src.screen_classifier import classify_screen, VS_TEMPLATE, WIN_TEMPLATE, LOSE_TEMPLATE
 
 def get_rois(img):
+    """
+    テンプレートマッチング用のROI座標を返す関数。
+    VSロゴ・WINロゴ・LOSEロゴの領域座標を辞書で返す。
+    """
     # VSロゴ（中央）
     vs_x1, vs_y1, vs_x2, vs_y2 = (789, 347, 1120, 619)
     # WINロゴ（左上）
@@ -17,6 +21,10 @@ def get_rois(img):
     }
 
 def draw_roi(img, roi, color, label):
+    """
+    指定したROI領域を矩形で描画し、ラベルを付与した画像を返す関数。
+    デバッグ用プレビュー表示に利用。
+    """
     x1, y1, x2, y2 = roi
     img = img.copy()
     cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
@@ -24,6 +32,9 @@ def draw_roi(img, roi, color, label):
     return img
 
 def main():
+    """
+    サンプル画像群に対して画面種別判定（classify_screen）を実行し、結果を表示するテスト関数。
+    """
     base_folder = "data/sample_frames/"
     img_paths = []
     for root, dirs, files in os.walk(base_folder):
@@ -38,7 +49,7 @@ def main():
         img = cv2.imread(img_path)
         print(f"{img_path}: {classify_screen(img)}")
 
-        # デバッグ用（プレビュー表示）
+        # debug:プレビュー表示
         # rois = get_rois(img)
         # preview = img.copy()
         # preview = draw_roi(preview, rois["VS"], (255,0,0), "VS")
