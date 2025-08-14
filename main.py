@@ -3,6 +3,7 @@ import os
 import yaml
 import cv2
 import pandas as pd
+import pickle
 from tqdm import tqdm
 from src.video_handler import extract_frames
 from src.regions_matching import ocr_on_matching_regions
@@ -15,12 +16,37 @@ def load_config(config_path):
     with open(config_path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
-def detect_screens(frame_paths):
+def extract_frames_with_cache(video_path, frame_interval, frame_dir, cache_path):
+    """
+    フレーム抽出結果（画像パスリスト）をキャッシュし、再実行時はキャッシュを利用して重複作業をスキップする
+    キャッシュがなければ、フレームを抽出し結果をキャッシュファイルに保存する
+    """
+    os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+    if os.path.exists(cache_path):
+        with open(cache_path, "rb") as f:
+            frame_paths = pickle.load(f)
+        print(f"フレーム抽出キャッシュを {cache_path} から読み込みました。")
+        return frame_paths
+
+    frame_paths = extract_frames(video_path, frame_interval, frame_dir)
+    with open(cache_path, "wb") as f:
+        pickle.dump(frame_paths, f)
+    print(f"フレーム抽出結果を {cache_path} に保存しました。")
+    return frame_paths
+
+def detect_screens_with_cache(frame_paths, cache_path):
     """
     フレーム画像のリストから、マッチング画面・リザルト画面のみを抽出し、
     画面種別とパスのリストを返す。
     画面判定結果を output/results/screen_log.csv に保存する。
     """
+    os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+    if os.path.exists(cache_path):
+        with open(cache_path, "rb") as f:
+            screens, match_count = pickle.load(f)
+        print(f"画面判定キャッシュを {cache_path} から読み込みました。")
+        return screens, match_count
+
     screens = []
     match_count = 0
     prev_type = None
@@ -41,6 +67,9 @@ def detect_screens(frame_paths):
     pd.DataFrame(log_rows).to_csv(log_path, index=False, encoding="utf-8-sig")
     print(f"画面判定結果を {log_path} に保存しました。")
 
+    with open(cache_path, "wb") as f:
+        pickle.dump((screens, match_count), f)
+    print(f"画面判定結果を {cache_path} に保存しました。")
     return screens, match_count
 
 def get_frame_timestamp(frame_path, frame_interval):
@@ -103,6 +132,7 @@ def save_to_csv(results, output_path):
 def main():
     """
     コマンドライン引数を受け取り、動画から戦績情報を抽出してCSVに保存するメイン処理
+    フレーム抽出・画面判定の両方でキャッシュ専用フォルダ(output/cache)を利用し、再実行時は重複作業をスキップする。
     """
     parser = argparse.ArgumentParser(description="EXVS2IB 戦績トラッカー")
     parser.add_argument("--input", required=True, help="入力動画ファイルのパス")
@@ -118,17 +148,14 @@ def main():
     frame_dir = os.path.join("output", "frames", input_name)
     os.makedirs(frame_dir, exist_ok=True)
 
-    frame_paths = sorted([
-        os.path.join(frame_dir, f)
-        for f in os.listdir(frame_dir)
-        if f.lower().endswith(".png")
-    ])
-    if frame_paths:
-        print(f"{len(frame_paths)}枚のフレーム画像が既に存在するため、抽出をスキップします。")
-    else:
-        frame_paths = extract_frames(args.input, frame_interval, frame_dir)
+    cache_dir = os.path.join("output", "cache")
+    os.makedirs(cache_dir, exist_ok=True)
+    frame_cache_path = os.path.join(cache_dir, f"frame_cache_{input_name}.pkl")
+    screen_cache_path = os.path.join(cache_dir, f"screen_cache_{input_name}.pkl")
 
-    screens, match_count = detect_screens(frame_paths)
+    frame_paths = extract_frames_with_cache(args.input, frame_interval, frame_dir, frame_cache_path)
+    screens, match_count = detect_screens_with_cache(frame_paths, screen_cache_path)
+
     results = extract_match_results(screens, match_count, frame_interval)
 
     output_dir = "output/results"
