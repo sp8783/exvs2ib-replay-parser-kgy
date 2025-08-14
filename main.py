@@ -18,19 +18,29 @@ def load_config(config_path):
 def detect_screens(frame_paths):
     """
     フレーム画像のリストから、マッチング画面・リザルト画面のみを抽出し、
-    画面種別とパスのリストを返す
+    画面種別とパスのリストを返す。
+    画面判定結果を output/results/screen_log.csv に保存する。
     """
     screens = []
     match_count = 0
     prev_type = None
+    log_rows = []
+
     for frame_path in tqdm(frame_paths, desc="画面判定"):
         img = cv2.imread(frame_path)
         screen_type = classify_screen(img)
+        log_rows.append({"frame_path": frame_path, "screen_type": screen_type})
         if screen_type in ("matching", "result_win", "result_lose"):
             screens.append({"type": screen_type, "path": frame_path})
             if prev_type == "matching" and screen_type in ("result_win", "result_lose"):
                 match_count += 1
             prev_type = screen_type
+
+    log_path = os.path.join("output", "results", "screen_log.csv")
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    pd.DataFrame(log_rows).to_csv(log_path, index=False, encoding="utf-8-sig")
+    print(f"画面判定結果を {log_path} に保存しました。")
+
     return screens, match_count
 
 def get_frame_timestamp(frame_path, frame_interval):
