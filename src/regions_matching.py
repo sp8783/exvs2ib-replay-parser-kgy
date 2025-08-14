@@ -6,13 +6,13 @@ from .preprocess import preprocess_for_ocr
 
 # 座標設定（各プレイヤー名、機体名）
 PLAYER_UNIT_REGIONS_RATIO = {
-    "player1_name": (0.04, 0.69, 0.18, 0.72),
+    "player1_name": (0.045, 0.693, 0.18, 0.72),
     "player1_unit": (0.035, 0.74, 0.22, 0.76),
     "player2_name": (0.27, 0.65, 0.39, 0.67),
     "player2_unit": (0.265, 0.69, 0.43, 0.71),
     "player3_name": (0.565, 0.65, 0.68, 0.67),
     "player3_unit": (0.575, 0.69, 0.74, 0.71),
-    "player4_name": (0.77, 0.69, 0.90, 0.72),
+    "player4_name": (0.77, 0.693, 0.90, 0.72),
     "player4_unit": (0.78, 0.74, 0.97, 0.76),
 }
 
