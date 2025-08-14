@@ -1,6 +1,6 @@
 import cv2
 import pytesseract
-from rapidfuzz import process
+from rapidfuzz import process, fuzz
 import csv
 from .preprocess import preprocess_for_ocr
 
@@ -66,14 +66,26 @@ def preprocess_ocr_text(text):
         text = text.replace(k, v)
     return text
 
+def penalized_scorer(a, b, **kwargs):
+    """
+    2つの文字列の類似度（fuzz.ratio）に加え、文字列長の差に応じてペナルティを加算する独自スコア関数。
+    これにより、短い名前（例:「ガンダム」）への部分一致による誤マッチを防ぎ、長さが近い候補が優先されるようになる。
+    """
+    score = fuzz.ratio(a, b)  # 通常の類似度（0～100）
+    penalty = abs(len(a) - len(b)) * 5  # 1文字差ごとに5点減点
+    return score - penalty
+
 def match_candidate(text, candidates):
     """
     OCRで得たテキストを候補リストから最も近いものにマッチングして返す。
+    penalized_scorerを使い、文字列長の差によるペナルティを加味した類似度で判定する。
     閾値以下の場合はNoneを返す。
     """
     if not text:
         return None
-    result = process.extractOne(text, candidates, score_cutoff=30)  # 閾値はテスト結果から低めに設定
+    result = process.extractOne(
+        text, candidates, scorer=penalized_scorer, score_cutoff=30
+    )
     if result is None:
         return None
     match, _, _ = result
