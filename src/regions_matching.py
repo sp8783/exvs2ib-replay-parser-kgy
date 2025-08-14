@@ -89,6 +89,9 @@ def ocr_on_matching_regions(img):
     for key, (x1, y1, x2, y2) in regions.items():
         roi = frame[y1:y2, x1:x2]
         # cv2.imwrite(f"output/debug/debug_{key}.png", roi) # debug:検出領域を保存
+        if roi is None or roi.size == 0:
+            print(f"警告: ROIが空です。フレーム: {getattr(img, 'filename', '不明')}, 領域: {key}, 座標: ({x1}, {y1}, {x2}, {y2})")
+            continue
         processed = preprocess_for_ocr(roi)
         text = pytesseract.image_to_string(processed, lang="jpn", config="--psm 7").strip()
         text = normalize_numbers(text)
