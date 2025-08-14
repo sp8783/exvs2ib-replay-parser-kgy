@@ -1,6 +1,6 @@
 import cv2
 import glob
-from src.regions_matching import ocr_on_matching_regions, get_player_unit_roi_from_ratio
+from src.regions_matching import ocr_on_matching_regions, get_player_unit_roi_from_ratio, preprocess_ocr_text
 import pytesseract
 from src.preprocess import preprocess_for_ocr
 
@@ -19,8 +19,7 @@ def draw_roi(img, roi, color, label):
 
 def main():
     """
-    マッチング画面画像を一括でOCR解析し、各領域の認識結果とROIプレビューを表示するツール。
-    前処理パラメータはpreprocess.pyの定数を編集することで調整可能。
+    マッチング画面画像を一括でOCR解析し、各領域の認識結果（生テキスト、前処理済み）とROIプレビューを表示するツール。
     """
     img_folder = "data/sample_frames/matching/"
     img_paths = glob.glob(img_folder + "*.png")
@@ -45,7 +44,9 @@ def main():
             roi_img = img[y1:y2, x1:x2]
             processed = preprocess_for_ocr(roi_img)
             ocr_text = pytesseract.image_to_string(processed, lang="jpn", config="--psm 7").strip()
+            preprocessed_text = preprocess_ocr_text(ocr_text)
             print(f"  {key} OCR raw: {ocr_text}")
+            print(f"  {key} OCR preprocessed: {preprocessed_text}")
             cv2.imshow(f"{key} processed", processed)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
