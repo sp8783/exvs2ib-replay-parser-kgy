@@ -41,12 +41,15 @@ def load_candidates(path):
 player_candidates = load_candidates("data/player_names.csv")
 unit_candidates = load_candidates("data/unit_names.csv")
 
-def normalize_numbers(text):
+def preprocess_ocr_text(text):
     """
-    丸数字など特殊な数字表記を通常の数字に変換する。
+    OCR結果の前処理（半角スペース除去＋数字正規化）を行う関数。
     """
     if not text:
         return text
+    # 半角スペース除去
+    text = text.replace(" ", "")
+    # 数字正規化
     replacements = {
         "①": "1",
         "②": "2",
@@ -94,7 +97,7 @@ def ocr_on_matching_regions(img):
             continue
         processed = preprocess_for_ocr(roi)
         text = pytesseract.image_to_string(processed, lang="jpn", config="--psm 7").strip()
-        text = normalize_numbers(text)
+        text = preprocess_ocr_text(text)
         # print(f"OCR raw text [{key}]: {text}") # debug:OCR生テキスト
         if "name" in key:
             results[key] = match_candidate(text, player_candidates)
