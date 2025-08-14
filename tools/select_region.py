@@ -6,7 +6,7 @@ cropping = False
 def shape_selection(event, x, y, flags, param):
     """
     マウス操作で画像上の矩形領域を選択するためのコールバック関数。
-    左クリックで始点、ドラッグで矩形表示、離すと終点を記録し座標を表示する。
+    左クリックで始点、ドラッグで矩形表示、離すと終点を記録し座標と割合を表示する。
     """
     global ref_point, cropping, img
 
@@ -26,8 +26,19 @@ def shape_selection(event, x, y, flags, param):
         cv2.imshow("image", img)
         print(f"Selected region: {ref_point[0]} to {ref_point[1]}")
 
+        h, w = img.shape[:2]
+        x1, y1 = ref_point[0]
+        x2, y2 = ref_point[1]
+        x1, x2 = min(x1, x2), max(x1, x2)
+        y1, y2 = min(y1, y2), max(y1, y2)
+        x1_ratio = x1 / w
+        y1_ratio = y1 / h
+        x2_ratio = x2 / w
+        y2_ratio = y2 / h
+        print(f"Ratios: x1={x1_ratio:.4f}, y1={y1_ratio:.4f}, x2={x2_ratio:.4f}, y2={y2_ratio:.4f}")
+
 if __name__ == "__main__":
-    img_path = "data/sample_frames/result/sample_frame2.png"  # 座標を知りたい画像のパスに変更してください
+    img_path = "data/sample_frames/matching/frame_00066.png"  # 座標を知りたい画像のパスに変更してください
     img = cv2.imread(img_path)
     if img is None:
         print(f"Error: Could not load image '{img_path}'")
