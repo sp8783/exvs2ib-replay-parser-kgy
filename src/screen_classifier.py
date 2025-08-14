@@ -8,6 +8,11 @@ VS_TEMPLATE = os.path.join(TEMPLATE_DIR, "vs.png")
 WIN_TEMPLATE = os.path.join(TEMPLATE_DIR, "win.png")
 LOSE_TEMPLATE = os.path.join(TEMPLATE_DIR, "lose.png")
 
+# 座標設定（VS、WIN、LOSEロゴ）
+VS_ROI_RATIO = (0.41, 0.315, 0.585, 0.575)
+WIN_ROI_RATIO = (0.035, 0.0125, 0.24, 0.105)
+LOSE_ROI_RATIO = (0.035, 0.0125, 0.32, 0.105)
+
 def resize_to_template(region, template_path):
     """
     region: 元画像から切り出したROI（numpy配列）
@@ -37,6 +42,17 @@ def _match_template(region, template_path, threshold=0.3):  # 0.4以上だとWIN
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
     return max_val >= threshold
 
+def get_logo_roi_from_ratio(img, roi_ratio):
+    """
+    画像サイズと割合からロゴの絶対座標を計算して返す
+    """
+    h, w = img.shape[:2]
+    x1 = int(w * roi_ratio[0])
+    y1 = int(h * roi_ratio[1])
+    x2 = int(w * roi_ratio[2])
+    y2 = int(h * roi_ratio[3])
+    return x1, y1, x2, y2
+
 def classify_screen(img):
     """
     テンプレートマッチングで画面種別を判定
@@ -48,19 +64,19 @@ def classify_screen(img):
         return "other"
 
     # マッチング画面判定（中央の「VS」ロゴ）
-    vs_x1, vs_y1, vs_x2, vs_y2 = (789, 347, 1120, 619)
+    vs_x1, vs_y1, vs_x2, vs_y2 = get_logo_roi_from_ratio(img, VS_ROI_RATIO)
     vs_roi = img[vs_y1:vs_y2, vs_x1:vs_x2]
     if _match_template(vs_roi, VS_TEMPLATE):
         return "matching"
 
     # WIN判定（左上の「WIN」ロゴ）
-    win_x1, win_y1, win_x2, win_y2 = (60, 10, 440, 120)
+    win_x1, win_y1, win_x2, win_y2 = get_logo_roi_from_ratio(img, WIN_ROI_RATIO)
     win_roi = img[win_y1:win_y2, win_x1:win_x2]
     if _match_template(win_roi, WIN_TEMPLATE):
         return "result_win"
 
     # LOSE判定（左上の「LOSE」ロゴ）
-    lose_x1, lose_y1, lose_x2, lose_y2 = (60, 10, 615, 120)
+    lose_x1, lose_y1, lose_x2, lose_y2 = get_logo_roi_from_ratio(img, LOSE_ROI_RATIO)
     lose_roi = img[lose_y1:lose_y2, lose_x1:lose_x2]
     if _match_template(lose_roi, LOSE_TEMPLATE):
         return "result_lose"
