@@ -4,17 +4,32 @@ from rapidfuzz import process
 import csv
 from .preprocess import preprocess_for_ocr
 
-# 座標設定
-regions = {
-    "player1_name": (83, 746, 343, 776),
-    "player1_unit": (65, 796, 424, 819),
-    "player2_name": (518, 700, 754, 725),
-    "player2_unit": (501, 744, 826, 767),
-    "player3_name": (1080, 700, 1316, 725),
-    "player3_unit": (1099, 744, 1421, 767),
-    "player4_name": (1479, 746, 1737, 776),
-    "player4_unit": (1500, 796, 1860, 819),
+# 座標設定（各プレイヤー名、機体名）
+PLAYER_UNIT_REGIONS_RATIO = {
+    "player1_name": (0.04, 0.69, 0.18, 0.72),
+    "player1_unit": (0.035, 0.74, 0.22, 0.76),
+    "player2_name": (0.27, 0.65, 0.39, 0.67),
+    "player2_unit": (0.265, 0.69, 0.43, 0.71),
+    "player3_name": (0.565, 0.65, 0.68, 0.67),
+    "player3_unit": (0.575, 0.69, 0.74, 0.71),
+    "player4_name": (0.77, 0.69, 0.90, 0.72),
+    "player4_unit": (0.78, 0.74, 0.97, 0.76),
 }
+
+def get_player_unit_roi_from_ratio(img):
+    """
+    画像サイズに応じて割合から領域座標を計算して返す関数。
+    プレイヤー名・機体名の領域座標を辞書で返す。
+    """
+    h, w = img.shape[:2]
+    regions = {}
+    for key, (x1r, y1r, x2r, y2r) in PLAYER_UNIT_REGIONS_RATIO.items():
+        x1 = int(w * x1r)
+        y1 = int(h * y1r)
+        x2 = int(w * x2r)
+        y2 = int(h * y2r)
+        regions[key] = (x1, y1, x2, y2)
+    return regions
 
 def load_candidates(path):
     """
@@ -70,6 +85,7 @@ def ocr_on_matching_regions(img):
     if frame is None:
         raise FileNotFoundError(f"Image not found at {img}")
     results = {}
+    regions = get_player_unit_roi_from_ratio(frame)
     for key, (x1, y1, x2, y2) in regions.items():
         roi = frame[y1:y2, x1:x2]
         # cv2.imwrite(f"output/debug/debug_{key}.png", roi) # debug:検出領域を保存

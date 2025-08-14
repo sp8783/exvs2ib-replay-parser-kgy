@@ -1,23 +1,17 @@
 import cv2
 import glob
 import os
-from src.screen_classifier import classify_screen, VS_TEMPLATE, WIN_TEMPLATE, LOSE_TEMPLATE
+from src.screen_classifier import VS_ROI_RATIO, WIN_ROI_RATIO, LOSE_ROI_RATIO, classify_screen, get_logo_roi_from_ratio
 
 def get_rois(img):
     """
-    テンプレートマッチング用のROI座標を返す関数。
+    マッチング画面の画像サイズに応じて、VSロゴ・WINロゴ・LOSEロゴの領域座標を計算して返す関数。
     VSロゴ・WINロゴ・LOSEロゴの領域座標を辞書で返す。
     """
-    # VSロゴ（中央）
-    vs_x1, vs_y1, vs_x2, vs_y2 = (789, 347, 1120, 619)
-    # WINロゴ（左上）
-    win_x1, win_y1, win_x2, win_y2 = (68, 15, 450, 112)
-    # LOSEロゴ（左上・広め）
-    lose_x1, lose_y1, lose_x2, lose_y2 = (68, 15, 608, 112)
     return {
-        "VS": (vs_x1, vs_y1, vs_x2, vs_y2),
-        "WIN": (win_x1, win_y1, win_x2, win_y2),
-        "LOSE": (lose_x1, lose_y1, lose_x2, lose_y2)
+        "VS": get_logo_roi_from_ratio(img, VS_ROI_RATIO),
+        "WIN": get_logo_roi_from_ratio(img, WIN_ROI_RATIO),
+        "LOSE": get_logo_roi_from_ratio(img, LOSE_ROI_RATIO)
     }
 
 def draw_roi(img, roi, color, label):
