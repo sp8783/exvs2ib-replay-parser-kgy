@@ -3,17 +3,18 @@ import pytesseract
 from rapidfuzz import process, fuzz
 import csv
 from .preprocess import preprocess_for_ocr
+from .ocr_matching_scorer import matching_scorer_for_unit_name, matching_scorer_for_player_name
 
 # 座標設定（各プレイヤー名、機体名）
 PLAYER_UNIT_REGIONS_RATIO = {
-    "player1_name": (0.045, 0.693, 0.18, 0.72),
-    "player1_unit": (0.035, 0.74, 0.22, 0.76),
+    "player1_name": (0.045, 0.693, 0.18, 0.718),
+    "player1_unit": (0.035, 0.738, 0.22, 0.762),
     "player2_name": (0.27, 0.65, 0.39, 0.67),
     "player2_unit": (0.265, 0.69, 0.43, 0.71),
     "player3_name": (0.565, 0.65, 0.68, 0.67),
     "player3_unit": (0.575, 0.69, 0.74, 0.71),
-    "player4_name": (0.77, 0.693, 0.90, 0.72),
-    "player4_unit": (0.78, 0.74, 0.97, 0.76),
+    "player4_name": (0.77, 0.693, 0.90, 0.718),
+    "player4_unit": (0.785, 0.738, 0.97, 0.762),
 }
 
 def get_player_unit_roi_from_ratio(img):
@@ -66,25 +67,16 @@ def preprocess_ocr_text(text):
         text = text.replace(k, v)
     return text
 
-def penalized_scorer(a, b, **kwargs):
-    """
-    2つの文字列の類似度（fuzz.ratio）に加え、文字列長の差に応じてペナルティを加算する独自スコア関数。
-    これにより、短い名前（例:「ガンダム」）への部分一致による誤マッチを防ぎ、長さが近い候補が優先されるようになる。
-    """
-    score = fuzz.ratio(a, b)  # 通常の類似度（0～100）
-    penalty = abs(len(a) - len(b)) * 5  # 1文字差ごとに5点減点
-    return score - penalty
-
-def match_candidate(text, candidates):
+def match_candidate(text, candidates, scorer):
     """
     OCRで得たテキストを候補リストから最も近いものにマッチングして返す。
-    penalized_scorerを使い、文字列長の差によるペナルティを加味した類似度で判定する。
+    scorerで指定したスコアリング関数を利用。
     閾値以下の場合はNoneを返す。
     """
     if not text:
         return None
     result = process.extractOne(
-        text, candidates, scorer=penalized_scorer, score_cutoff=30
+        text, candidates, scorer=scorer, score_cutoff=30
     )
     if result is None:
         return None
@@ -95,6 +87,7 @@ def ocr_on_matching_regions(img):
     """
     マッチング画面画像から各領域を切り出し、OCR・候補マッチングを行い、
     プレイヤー名・機体名を辞書で返す。
+    領域ごと（プレイヤー名・機体名）に適切なスコアリング関数を利用。
     """
     frame = img
     if frame is None:
@@ -103,16 +96,14 @@ def ocr_on_matching_regions(img):
     regions = get_player_unit_roi_from_ratio(frame)
     for key, (x1, y1, x2, y2) in regions.items():
         roi = frame[y1:y2, x1:x2]
-        # cv2.imwrite(f"output/debug/debug_{key}.png", roi) # debug:検出領域を保存
         if roi is None or roi.size == 0:
             print(f"警告: ROIが空です。フレーム: {getattr(img, 'filename', '不明')}, 領域: {key}, 座標: ({x1}, {y1}, {x2}, {y2})")
             continue
         processed = preprocess_for_ocr(roi)
-        text = pytesseract.image_to_string(processed, lang="jpn", config="--psm 7").strip()
+        text = pytesseract.image_to_string(processed, lang="jpn+eng", config="--psm 7").strip()
         text = preprocess_ocr_text(text)
-        # print(f"OCR raw text [{key}]: {text}") # debug:OCR生テキスト
         if "name" in key:
-            results[key] = match_candidate(text, player_candidates)
+            results[key] = match_candidate(text, player_candidates, matching_scorer_for_player_name)
         else:
-            results[key] = match_candidate(text, unit_candidates)
+            results[key] = match_candidate(text, unit_candidates, matching_scorer_for_unit_name)
     return results
