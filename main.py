@@ -88,15 +88,35 @@ def extract_match_results(screens, match_count, frame_interval):
     """
     マッチング画面→リザルト画面のペアごとにOCRを実行し、
     1試合分の情報（プレイヤー名・機体名・勝敗・開始タイムスタンプなど）を辞書としてまとめてリストで返す
+    OCRに使用したmatching画面のファイル名も記録する
     """
     results = []
     i = 0
     pbar = tqdm(total=match_count, desc="試合情報抽出")
     while i < len(screens) - 1:
-        if screens[i]["type"] == "matching" and screens[i+1]["type"] in ("result_win", "result_lose"):
-            match_img = cv2.imread(screens[i]["path"])
-            match_info = ocr_on_matching_regions(match_img)
-            result_type = screens[i+1]["type"]
+        # マッチンググループの収集
+        matching_frames = []
+        while i < len(screens) and screens[i]["type"] == "matching":
+            matching_frames.append(screens[i])
+            i += 1
+        # 次がリザルト画面か判定
+        if i < len(screens) and screens[i]["type"] in ("result_win", "result_lose") and matching_frames:
+            # 欠損がなくなるまで順次OCR
+            final_info = None
+            used_frame_name = None
+            for frame in matching_frames:
+                match_img = cv2.imread(frame["path"])
+                match_info = ocr_on_matching_regions(match_img)
+                # 欠損がなければ採用して終了
+                if all(v is not None for v in match_info.values()):
+                    final_info = match_info
+                    used_frame_name = os.path.basename(frame["path"])
+                    break
+                # 欠損がある場合も、より多く埋まったものを優先
+                if final_info is None or sum(v is not None for v in match_info.values()) > sum(v is not None for v in final_info.values()):
+                    final_info = match_info
+                    used_frame_name = os.path.basename(frame["path"])
+            result_type = screens[i]["type"]
             if result_type == "result_win":
                 result_info = {
                     "player1_result": "WIN",
@@ -111,10 +131,10 @@ def extract_match_results(screens, match_count, frame_interval):
                     "player3_result": "WIN",
                     "player4_result": "WIN"
                 }
-            match_timestamp = get_frame_timestamp(screens[i]["path"], frame_interval)
-            row = {**match_info, **result_info, "start_time": match_timestamp}
+            match_timestamp = get_frame_timestamp(used_frame_name, frame_interval)
+            row = {**final_info, **result_info, "start_time": match_timestamp, "ocr_frame_name": used_frame_name}
             results.append(row)
-            i += 2
+            i += 1
             pbar.update(1)
         else:
             i += 1
