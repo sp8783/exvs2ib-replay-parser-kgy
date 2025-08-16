@@ -1,11 +1,9 @@
-import cv2
 import pytesseract
-from rapidfuzz import process, fuzz
 import csv
+from rapidfuzz import process
 from .preprocess import preprocess_for_ocr
 from .ocr_matching_scorer import matching_scorer_for_unit_name, matching_scorer_for_player_name
 
-# 座標設定（各プレイヤー名、機体名）
 PLAYER_UNIT_REGIONS_RATIO = {
     "player1_name": (0.045, 0.693, 0.18, 0.718),
     "player1_unit": (0.035, 0.738, 0.22, 0.762),
@@ -16,6 +14,32 @@ PLAYER_UNIT_REGIONS_RATIO = {
     "player4_name": (0.77, 0.693, 0.90, 0.718),
     "player4_unit": (0.785, 0.738, 0.97, 0.762),
 }
+
+def load_candidates(path):
+    """
+    指定したCSVファイルから候補リスト（1列目）を読み込んでリストで返す。
+    """
+    with open(path, encoding="utf-8") as f:
+        return [row[0] for row in csv.reader(f) if row]
+
+player_candidates = load_candidates("data/player_names.csv")
+unit_candidates = load_candidates("data/unit_names.csv")
+
+def ocr_on_matching_regions(img):
+    """
+    マッチング画面画像から各領域を切り出し、OCR・候補マッチングを行い、
+    プレイヤー名・機体名を辞書で返す。
+    領域ごと（プレイヤー名・機体名）に適切なスコアリング関数を利用。
+    """
+    frame = img
+    if frame is None:
+        raise FileNotFoundError(f"Image not found at {img}")
+    results = {}
+    regions = get_player_unit_roi_from_ratio(frame)
+    for key, roi in regions.items():
+        preprocessed_text = get_preprocessed_text_from_roi(frame, roi)
+        results[key] = match_text(key, preprocessed_text)
+    return results
 
 def get_player_unit_roi_from_ratio(img):
     """
@@ -32,15 +56,36 @@ def get_player_unit_roi_from_ratio(img):
         regions[key] = (x1, y1, x2, y2)
     return regions
 
-def load_candidates(path):
+def get_preprocessed_text_from_roi(img, roi):
     """
-    指定したCSVファイルから候補リスト（1列目）を読み込んでリストで返す。
+    指定画像とROIから前処理済みテキストを返す関数。
     """
-    with open(path, encoding="utf-8") as f:
-        return [row[0] for row in csv.reader(f) if row]
+    processed = preprocess_for_ocr(get_roi(img, roi))
+    ocr_text = ocr_roi(processed)
+    preprocessed_text = preprocess_ocr_text(ocr_text)
+    return preprocessed_text
 
-player_candidates = load_candidates("data/player_names.csv")
-unit_candidates = load_candidates("data/unit_names.csv")
+def match_text(key, text):
+    """
+    領域種別（name/unit）に応じて、テキストを候補リストとマッチングして返す関数。
+    """
+    if "name" in key:
+        return match_candidate(text, player_candidates, matching_scorer_for_player_name)
+    else:
+        return match_candidate(text, unit_candidates, matching_scorer_for_unit_name)
+
+def get_roi(img, roi):
+    """
+    指定したROI座標から画像領域を切り出して返す関数。
+    """
+    x1, y1, x2, y2 = roi
+    return img[y1:y2, x1:x2]
+
+def ocr_roi(processed_img):
+    """
+    前処理済み画像からOCR生テキストを抽出して返す関数。
+    """
+    return pytesseract.image_to_string(processed_img, lang="jpn+eng", config="--psm 7").strip()
 
 def preprocess_ocr_text(text):
     """
@@ -82,28 +127,3 @@ def match_candidate(text, candidates, scorer):
         return None
     match, _, _ = result
     return match
-
-def ocr_on_matching_regions(img):
-    """
-    マッチング画面画像から各領域を切り出し、OCR・候補マッチングを行い、
-    プレイヤー名・機体名を辞書で返す。
-    領域ごと（プレイヤー名・機体名）に適切なスコアリング関数を利用。
-    """
-    frame = img
-    if frame is None:
-        raise FileNotFoundError(f"Image not found at {img}")
-    results = {}
-    regions = get_player_unit_roi_from_ratio(frame)
-    for key, (x1, y1, x2, y2) in regions.items():
-        roi = frame[y1:y2, x1:x2]
-        if roi is None or roi.size == 0:
-            print(f"警告: ROIが空です。フレーム: {getattr(img, 'filename', '不明')}, 領域: {key}, 座標: ({x1}, {y1}, {x2}, {y2})")
-            continue
-        processed = preprocess_for_ocr(roi)
-        text = pytesseract.image_to_string(processed, lang="jpn+eng", config="--psm 7").strip()
-        text = preprocess_ocr_text(text)
-        if "name" in key:
-            results[key] = match_candidate(text, player_candidates, matching_scorer_for_player_name)
-        else:
-            results[key] = match_candidate(text, unit_candidates, matching_scorer_for_unit_name)
-    return results
