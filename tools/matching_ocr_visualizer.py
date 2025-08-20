@@ -8,6 +8,7 @@ from src.ocr import (
     preprocess_for_ocr
 )
 from src.util.image import get_player_unit_roi_from_ratio, get_roi
+from src.core.config import Config
 from tools.util import draw_roi, show_image
 
 def show_roi_info(img, key, roi, color):

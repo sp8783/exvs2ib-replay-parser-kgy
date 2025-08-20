@@ -2,7 +2,7 @@ from src.core.config import Config
 from src.util.image import get_roi, get_player_unit_roi_from_ratio
 from .preprocess import preprocess_for_ocr
 from .matcher import match_text
-import pytesseract
+from .engines import get_ocr_adapter
 
 _config = Config("config/config.yaml")
 
@@ -10,10 +10,8 @@ def ocr_roi(processed_img):
     """
     前処理済み画像からOCR生テキストを抽出して返す関数。
     """
-    ocr_conf = _config.get("ocr", default={})
-    lang = ocr_conf.get("lang", "jpn+eng")
-    psm = ocr_conf.get("psm", 7)
-    return pytesseract.image_to_string(processed_img, lang=lang, config=f"--psm {psm}").strip()
+    ocr_adapter = get_ocr_adapter()
+    return ocr_adapter.extract_text(processed_img)
 
 def preprocess_ocr_text(text):
     """

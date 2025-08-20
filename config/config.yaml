@@ -4,9 +4,18 @@ video:
 
 # OCR設定
 ocr:
-  lang: jpn+eng      # 使用言語
-  psm: 7             # Page Segmentation Mode
-  score_cutoff: 30   # マッチング時の最低スコア閾値
+  engine: easyocr   # 使用するエンジン: tesseract, easyocr
+  score_cutoff: 30   # マッチング時の最低スコア閾値（全エンジン共通）
+  
+  # エンジン別設定
+  engines:
+    tesseract:
+      lang: jpn+eng    # 使用言語
+      psm: 7           # Page Segmentation Mode
+      oem: 3           # OCR Engine Mode
+      config: "--psm 7 -c preserve_interword_spaces=1"  # 追加設定
+    easyocr:
+      languages: ["ja", "en"]  # 日本語と英語をサポート
 
 # テンプレート画像パス
 template:
