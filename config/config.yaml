@@ -1,5 +1,59 @@
-# フレーム抽出間隔（秒）
-frame_interval: 5
+# フレーム抽出設定
+video:
+  frame_interval: 2  # 動画からフレームを抽出する間隔（秒）
 
-# OCRで使用する言語
-ocr_lang: jpn+eng
+# OCR設定
+ocr:
+  lang: jpn+eng      # 使用言語
+  psm: 7             # Page Segmentation Mode
+  score_cutoff: 30   # マッチング時の最低スコア閾値
+
+# テンプレート画像パス
+template:
+  vs: templates/vs.png
+  win: templates/win.png
+  lose: templates/lose.png
+  threshold: 0.3     # テンプレートマッチングの閾値
+
+# 画面判定用ROI（割合指定）
+roi:
+  vs: [0.41, 0.315, 0.585, 0.575]
+  win: [0.035, 0.0125, 0.24, 0.105]
+  lose: [0.035, 0.0125, 0.32, 0.105]
+  player_unit:
+    player1_name: [0.045, 0.693, 0.18, 0.718]
+    player1_unit: [0.035, 0.738, 0.22, 0.762]
+    player2_name: [0.27, 0.65, 0.39, 0.67]
+    player2_unit: [0.265, 0.69, 0.43, 0.71]
+    player3_name: [0.565, 0.65, 0.68, 0.67]
+    player3_unit: [0.575, 0.69, 0.74, 0.71]
+    player4_name: [0.77, 0.693, 0.90, 0.718]
+    player4_unit: [0.785, 0.738, 0.97, 0.762]
+
+# 前処理パラメータ
+preprocess:
+  scale: 4
+  alpha: 1
+  beta: 10
+  sharp_kernel: [[0, -1, 0], [-1, 5, -1], [0, -1, 0]]
+  thresh: 127
+
+# 入力データパス
+data:
+  player_names: data/player_names.csv
+  unit_names: data/unit_names.csv
+
+# 出力ディレクトリ
+output:
+  frames: output/frames
+  cache: output/cache
+  results: output/results
+
+# ツール用入力データパス
+tools:
+  roi_selector:
+    image_path: data/sample_frames/matching2/frame_01819.png
+  screen_classifier_visualizer:
+    sample_frames_dir: data/sample_frames/
+  matching_ocr_visualizer:
+    matching_frames_dir: data/sample_frames/matching2/

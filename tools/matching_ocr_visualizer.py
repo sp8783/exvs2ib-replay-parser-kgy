@@ -1,45 +1,27 @@
 import cv2
 import glob
-from src.regions_matching import (
+from src.core.config import Config
+from src.ocr import (
     ocr_on_matching_regions,
-    get_player_unit_roi_from_ratio,
     get_preprocessed_text_from_roi,
     match_text,
-    get_roi
+    preprocess_for_ocr
 )
-from src.preprocess import preprocess_for_ocr
-
-def draw_roi(img, roi, color, label):
-    """
-    指定したROI領域を矩形で描画し、ラベルを付与した画像を返す関数。
-    """
-    x1, y1, x2, y2 = roi
-    img = img.copy()
-    cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
-    font_scale = 0.5
-    thickness = 1
-    label_y = max(y1 - 5, 0)
-    cv2.putText(img, label, (x1, label_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, color, thickness)
-    return img
+from src.util.image import get_player_unit_roi_from_ratio, get_roi
+from tools.util import draw_roi, show_image
 
 def show_roi_info(img, key, roi, color):
     """
     1つのROI領域について、前処理済みテキスト・マッチング結果・前処理画像プレビューを表示する。
     """
-    # ROI枠描画
     img_with_roi = draw_roi(img, roi, color, key)
-    # 前処理済みテキスト取得
     preprocessed_text = get_preprocessed_text_from_roi(img, roi)
-    # マッチング結果取得
     matched = match_text(key, preprocessed_text)
     print(f"  {key} OCR preprocessed: {preprocessed_text}")
     print(f"  {key} matched: {matched}")
-    # 前処理画像プレビュー
     roi_img = get_roi(img, roi)
     processed_img = preprocess_for_ocr(roi_img)
-    cv2.imshow(f"{key} processed preview", processed_img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    show_image(processed_img, f"{key} processed preview")
     return img_with_roi
 
 def show_roi_debug(img, regions):
@@ -75,15 +57,14 @@ def process_image(img_path):
     regions = get_player_unit_roi_from_ratio(img)
     preview = show_roi_debug(img, regions)
     show_final_result(result)
-    cv2.imshow(f"Preview: {img_path}", preview)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    show_image(preview, f"Preview: {img_path}")
 
 def main():
     """
     マッチング画面画像を一括でOCR解析し、各領域の認識結果（前処理済みテキスト、マッチング結果、前処理画像プレビュー）とROIプレビューを表示するデバッグツール。
     """
-    img_folder = "data/sample_frames/matching2/"
+    config = Config("config/config.yaml")
+    img_folder = config.get("tools", "matching_ocr_visualizer", "matching_frames_dir")
     img_paths = glob.glob(img_folder + "*.png")
     if not img_paths:
         print(f"No images found in {img_folder}")

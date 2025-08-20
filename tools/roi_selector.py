@@ -1,7 +1,5 @@
 import cv2
-
-ref_point = []
-cropping = False
+from src.core.config import Config
 
 def shape_selection(event, x, y, flags, param):
     """
@@ -37,8 +35,18 @@ def shape_selection(event, x, y, flags, param):
         y2_ratio = y2 / h
         print(f"Ratios: x1={x1_ratio:.4f}, y1={y1_ratio:.4f}, x2={x2_ratio:.4f}, y2={y2_ratio:.4f}")
 
-if __name__ == "__main__":
-    img_path = "data/sample_frames/matching/frame_00066.png"  # 座標を知りたい画像のパスに変更してください
+def main():
+    """
+    画像を表示し、マウスドラッグでROI（矩形領域）を選択できるツール。
+    選択した座標と画像サイズに対する割合を表示する。
+    """
+    global img, ref_point, cropping
+    ref_point = []
+    cropping = False
+
+    # config.yamlから画像パスを取得
+    config = Config("config/config.yaml")
+    img_path = config.get("tools", "roi_selector", "image_path")
     img = cv2.imread(img_path)
     if img is None:
         print(f"Error: Could not load image '{img_path}'")
@@ -61,3 +69,6 @@ if __name__ == "__main__":
             break
 
     cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    main()
