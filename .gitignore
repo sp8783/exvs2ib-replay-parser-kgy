@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+
+# 環境
+.env
+.venv/
+
+# 入力・出力データ
+data/*.mp4
+data/*.avi
+data/sample_frames/
+output/
