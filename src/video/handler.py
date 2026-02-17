@@ -71,8 +71,6 @@ def extract_and_classify_frames(video_path, frame_interval_sec, output_dir, conf
     cap = open_video(video_path)
     fps = get_fps(cap)
     frame_interval = int(fps * frame_interval_sec)
-    frame_count = 0
-    idx = 0
 
     screens = []
     match_count = 0
@@ -83,11 +81,16 @@ def extract_and_classify_frames(video_path, frame_interval_sec, output_dir, conf
     total_extracted = total_frames // frame_interval
     pbar = tqdm(total=total_extracted, desc="フレーム抽出・画面判定")
 
+    frame_count = 0
+    idx = 0
     while True:
-        ret, frame = cap.read()
-        if not ret:
+        if not cap.grab():
             break
         if frame_count % frame_interval == 0:
+            ret, frame = cap.retrieve()
+            if not ret:
+                break
+
             screen_type = classifier.classify(frame)
             frame_path = os.path.join(output_dir, f"frame_{idx:05d}.png")
             log_rows.append({"frame": f"frame_{idx:05d}.png", "screen_type": screen_type})
