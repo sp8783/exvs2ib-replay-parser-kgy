@@ -40,7 +40,8 @@ def extract_frames(video_path, frame_interval_sec, output_dir):
     idx = 0
 
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    pbar = tqdm(total=total_frames, desc="フレーム抽出")
+    total_extracted = total_frames // frame_interval
+    pbar = tqdm(total=total_extracted, desc="フレーム抽出")
 
     while True:
         ret, frame = cap.read()
@@ -50,8 +51,8 @@ def extract_frames(video_path, frame_interval_sec, output_dir):
             frame_path = save_frame(frame, output_dir, idx)
             saved_paths.append(frame_path)
             idx += 1
+            pbar.update(1)
         frame_count += 1
-        pbar.update(1)
 
     cap.release()
     pbar.close()
