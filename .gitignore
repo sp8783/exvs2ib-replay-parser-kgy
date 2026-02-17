@@ -6,6 +6,9 @@ __pycache__/
 .env
 .venv/
 
+# Claude Code
+CLAUDE.md
+
 # 入力・出力データ
 data/*.mp4
 data/*.avi
