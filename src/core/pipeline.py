@@ -2,11 +2,11 @@ import os
 import pandas as pd
 from src.core.config import Config
 from src.processing.match_extractor import MatchExtractor
-from src.processing.screen_detector import ScreenDetector
+from src.processing.screen_detector import ScreenDetector, save_screen_log
 from src.util.io import ensure_dir, save_dataframe_csv
 from src.util.cache import CacheManager
 from src.util.timestamp import calculate_timestamp
-from src.video.handler import extract_frames
+from src.video.handler import extract_frames, extract_and_classify_frames
 
 class Pipeline:
     """
@@ -16,6 +16,7 @@ class Pipeline:
 
     def __init__(self, video_path, config_path, mode="full"):
         self.config = Config(config_path)
+        self.config_path = config_path
         self.video_path = video_path
         self.video_basename = os.path.splitext(os.path.basename(video_path))[0]
         self.mode = mode
@@ -45,11 +46,8 @@ class Pipeline:
         """
         パイプライン全体を実行する。
         """
-        # 1. フレーム抽出（キャッシュ対応）
-        frame_paths = self._extract_frames_with_cache()
-
-        # 2. 画面判定とマッチングカウント算出（キャッシュ対応）
-        screens, match_count = self._detect_screens_with_cache(frame_paths)
+        # 1. フレーム抽出＋画面判定（統合フロー、キャッシュ対応）
+        screens, match_count = self._extract_and_classify_with_cache()
 
         if self.mode == "timestamps":
             # タイムスタンプのみ出力
@@ -78,8 +76,26 @@ class Pipeline:
         """
         if self.cache_manager.has_screens_cache():
             return self.cache_manager.load_screens_cache()
-        
+
         screens, match_count = self.screen_detector.detect_screens(frame_paths, self.results_dir)
+        self.cache_manager.save_screens_cache(screens, match_count)
+        return screens, match_count
+
+    def _extract_and_classify_with_cache(self):
+        """
+        フレーム抽出＋画面判定の統合フロー（キャッシュ対応）。
+        screens_cache があればそのまま使い、なければ統合処理を実行する。
+        """
+        if self.cache_manager.has_screens_cache():
+            return self.cache_manager.load_screens_cache()
+
+        screens, match_count, log_rows = extract_and_classify_frames(
+            self.video_path,
+            self.config.get("video", "frame_interval"),
+            self.frames_dir,
+            self.config_path,
+        )
+        save_screen_log(log_rows, self.results_dir)
         self.cache_manager.save_screens_cache(screens, match_count)
         return screens, match_count
 

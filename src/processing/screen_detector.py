@@ -1,7 +1,21 @@
+import os
 import cv2
 import pandas as pd
 from tqdm import tqdm
 from src.screen.classifier import ScreenClassifier
+from src.util.io import ensure_dir
+
+
+def save_screen_log(log_rows, results_dir):
+    """
+    画面判定結果をCSVファイルに保存する。
+    統合フロー・従来フローどちらからも呼び出せる独立関数。
+    """
+    ensure_dir(results_dir)
+    log_path = os.path.join(results_dir, "screen_log.csv")
+    pd.DataFrame(log_rows).to_csv(log_path, index=False, encoding="utf-8-sig")
+    print(f"画面判定結果を {log_path} に保存しました。")
+
 
 class ScreenDetector:
     """
@@ -33,17 +47,5 @@ class ScreenDetector:
                 prev_type = screen_type
 
         # 画面判定ログをCSVに保存
-        self._save_screen_log(log_rows, results_dir)
+        save_screen_log(log_rows, results_dir)
         return screens, match_count
-    
-    def _save_screen_log(self, log_rows, results_dir):
-        """
-        画面判定結果をCSVファイルに保存する。
-        """
-        import os
-        from src.util.io import ensure_dir
-        
-        ensure_dir(results_dir)
-        log_path = os.path.join(results_dir, "screen_log.csv")
-        pd.DataFrame(log_rows).to_csv(log_path, index=False, encoding="utf-8-sig")
-        print(f"画面判定結果を {log_path} に保存しました。")
