@@ -1,0 +1,114 @@
+name: 動画解析・タイムスタンプ自動送信
+
+on:
+  workflow_dispatch:
+    inputs:
+      event_id:
+        description: 'vsmobile-kgy の Event ID'
+        required: true
+      broadcast_url:
+        description: 'YouTube 配信アーカイブの URL'
+        required: true
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+
+      - name: システム依存パッケージをインストール
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tesseract-ocr tesseract-ocr-jpn libgl1
+
+      - name: Python セットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: 依存パッケージをインストール
+        run: pip install -r requirements.txt
+
+      - name: yt-dlp をインストール
+        run: pip install yt-dlp
+
+      - name: 動画をダウンロード
+        run: |
+          yt-dlp \
+            -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" \
+            --merge-output-format mp4 \
+            -o "broadcast.mp4" \
+            "${{ inputs.broadcast_url }}"
+
+      - name: 解析を実行
+        run: python main.py --input broadcast.mp4 --mode timestamps
+
+      - name: タイムスタンプを確認
+        run: |
+          python3 - <<'EOF'
+          import csv, glob, sys
+
+          csv_files = glob.glob("output/results/timestamps_*.csv")
+          if not csv_files:
+              print("ERROR: タイムスタンプ CSV が見つかりません")
+              sys.exit(1)
+
+          with open(csv_files[0]) as f:
+              rows = list(csv.DictReader(f))
+
+          print(f"=== {len(rows)} 試合を検出 ===")
+          for row in rows:
+              print(f"  試合 {row['match_number']}: {row['start_time']}")
+          EOF
+
+      - name: vsmobile-kgy API にタイムスタンプを送信
+        env:
+          API_URL: ${{ secrets.VSMOBILE_FOR_KGY_API_URL }}
+          API_TOKEN: ${{ secrets.VSMOBILE_FOR_KGY_API_TOKEN }}
+          EVENT_ID: ${{ inputs.event_id }}
+        run: |
+          python3 - <<'EOF'
+          import csv, glob, json, os, sys, urllib.request, urllib.error
+
+          api_url = os.environ.get("API_URL", "").rstrip("/")
+          api_token = os.environ.get("API_TOKEN", "")
+          event_id = os.environ.get("EVENT_ID", "")
+
+          csv_files = glob.glob("output/results/timestamps_*.csv")
+          with open(csv_files[0]) as f:
+              rows = list(csv.DictReader(f))
+
+          # HH:MM:SS → H:MM:SS 変換（API の期待フォーマット）
+          def to_hms(t):
+              h, m, s = t.split(":")
+              return f"{int(h)}:{m}:{s}"
+
+          timestamps_str = "\n".join(to_hms(row["start_time"]) for row in rows)
+
+          if not api_token:
+              print("⚠️  VSMOBILE_FOR_KGY_API_TOKEN が未設定のため API 送信をスキップします（ドライランモード）")
+              print(f"送信予定エンドポイント: POST {api_url}/api/events/{event_id}/timestamps")
+              print(f"送信予定データ:\n{timestamps_str}")
+              sys.exit(0)
+
+          url = f"{api_url}/api/events/{event_id}/timestamps"
+          payload = json.dumps({"timestamps": timestamps_str}).encode()
+          req = urllib.request.Request(
+              url,
+              data=payload,
+              headers={
+                  "Authorization": f"Bearer {api_token}",
+                  "Content-Type": "application/json",
+              },
+              method="POST",
+          )
+          try:
+              with urllib.request.urlopen(req) as resp:
+                  print(f"✅ 送信完了 (HTTP {resp.status}): {resp.read().decode()}")
+          except urllib.error.HTTPError as e:
+              print(f"❌ 送信失敗 (HTTP {e.code}): {e.read().decode()}")
+              sys.exit(1)
+          EOF
