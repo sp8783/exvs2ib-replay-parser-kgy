@@ -66,7 +66,7 @@ jobs:
         run: |
           VIDEO_FILE="${{ steps.download.outputs.video_file }}"
           echo "解析対象ファイル: $VIDEO_FILE ($(du -h "$VIDEO_FILE" | cut -f1))"
-          python main.py --input "$VIDEO_FILE" --mode timestamps
+          python main.py --input "$VIDEO_FILE"
 
       - name: タイムスタンプを確認
         run: |
