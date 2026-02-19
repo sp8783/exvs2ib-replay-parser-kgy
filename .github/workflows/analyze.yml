@@ -75,7 +75,7 @@ jobs:
               print("ERROR: タイムスタンプ CSV が見つかりません")
               sys.exit(1)
 
-          with open(csv_files[0]) as f:
+          with open(csv_files[0], encoding="utf-8-sig") as f:
               rows = list(csv.DictReader(f))
 
           print(f"=== {len(rows)} 試合を検出 ===")
@@ -97,7 +97,7 @@ jobs:
           event_id = os.environ.get("EVENT_ID", "")
 
           csv_files = glob.glob("output/results/timestamps_*.csv")
-          with open(csv_files[0]) as f:
+          with open(csv_files[0], encoding="utf-8-sig") as f:
               rows = list(csv.DictReader(f))
 
           # HH:MM:SS → H:MM:SS 変換（API の期待フォーマット）
