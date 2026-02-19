@@ -51,13 +51,16 @@ jobs:
             --merge-output-format mp4 \
             --js-runtimes node \
             --remote-components ejs:github \
-            -o "broadcast.%(ext)s" \
+            -o "broadcast.mp4" \
             $COOKIES_OPT \
             "${{ inputs.broadcast_url }}"
-          VIDEO_FILE=$(ls broadcast.* | head -1)
           echo "=== ダウンロードされたファイル ==="
           ls -lh broadcast.*
-          echo "video_file=$VIDEO_FILE" >> $GITHUB_OUTPUT
+          if [ ! -f "broadcast.mp4" ]; then
+            echo "ERROR: broadcast.mp4 が見つかりません"
+            exit 1
+          fi
+          echo "video_file=broadcast.mp4" >> $GITHUB_OUTPUT
 
       - name: 解析を実行
         run: |
