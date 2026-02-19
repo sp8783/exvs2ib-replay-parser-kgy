@@ -1,4 +1,4 @@
-def calculate_timestamp(frame_name, frame_interval):
+def calculate_timestamp(frame_name: str, frame_interval: float) -> str:
     """
     フレーム画像ファイル名から連番を取得し、frame_intervalからタイムスタンプをhh:mm:ss形式で返す。
     """

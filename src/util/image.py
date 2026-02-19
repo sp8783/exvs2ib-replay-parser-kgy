@@ -1,10 +1,8 @@
-from src.core.config import Config
 import cv2
+import numpy as np
 
-_config = Config("config/config.yaml")
-roi_config = _config.get("roi", "player_unit", default={})
 
-def get_player_unit_roi_from_ratio(img):
+def get_player_unit_roi_from_ratio(img: np.ndarray, roi_config: dict) -> dict[str, tuple[int, int, int, int]]:
     """
     画像サイズに応じて割合から領域座標を計算して返す関数。
     プレイヤー名・機体名の領域座標を辞書で返す。
@@ -19,14 +17,16 @@ def get_player_unit_roi_from_ratio(img):
         regions[key] = (x1, y1, x2, y2)
     return regions
 
-def get_roi(img, roi):
+
+def get_roi(img: np.ndarray, roi: tuple[int, int, int, int]) -> np.ndarray:
     """
     指定したROI座標から画像領域を切り出して返す関数。
     """
     x1, y1, x2, y2 = roi
     return img[y1:y2, x1:x2]
 
-def resize_to_template(region, template):
+
+def resize_to_template(region: np.ndarray, template: np.ndarray) -> np.ndarray:
     """
     regionをテンプレート画像のサイズにリサイズする関数。
     """
@@ -36,7 +36,8 @@ def resize_to_template(region, template):
     region_resized = cv2.resize(region, (w, h), interpolation=cv2.INTER_AREA)
     return region_resized
 
-def roi_ratio_to_absolute(img, roi_ratio):
+
+def roi_ratio_to_absolute(img: np.ndarray, roi_ratio: list | tuple) -> tuple[int, int, int, int]:
     """
     ROIの割合指定を絶対座標に変換する汎用関数。
     """

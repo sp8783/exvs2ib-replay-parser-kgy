@@ -1,61 +1,95 @@
 # EXVS2IB Replay Parser (KGY専用)
 
-**機動戦士ガンダム エクストリームバーサス2 インフィニットブースト（EXVS2IB）** の対戦動画から、戦績情報（勝敗・プレイヤー名・機体名など）を自動抽出するツールです。  
-このリポジトリは **KGY専用・実験的実装** です。
+**機動戦士ガンダム エクストリームバーサス2 インフィニットブースト（EXVS2IB）** の対戦動画から、試合開始タイムスタンプを自動抽出するツールです。KGY専用。
 
 ---
 
 ## 概要
-YouTubeなどに投稿された対戦動画を対象に、OCRで画面上の文字を解析し、試合ごとの情報をCSVに記録します。  
-現在は **動画入力 → フレーム抽出 → OCR → CSV出力** まで対応しています。  
+
+YouTubeなどに投稿された対戦動画を対象に、テンプレートマッチングで画面種別（マッチング画面・リザルト画面）を識別し、試合ごとの開始タイムスタンプをCSVに記録します。
 
 ---
 
 ## 機能
-- 🎞️ **動画処理**: 動画からフレームを抽出（デフォルトは2秒間隔）  
-- 🖼️ **画面判定**: マッチング画面・リザルト画面の識別  
-- 🔍 **OCR解析**: プレイヤー名・機体名を自動抽出（Tesseract使用）  
-- 📊 **出力**: CSV保存（キャッシュ機能付き）  
-- 🛠️ **デバッグ用ツール**: 画面判定結果・OCR結果・ROI選択の可視化  
+
+- **動画処理**: 動画からフレームを抽出（デフォルトは2秒間隔）
+- **画面判定**: マッチング画面・リザルト画面をテンプレートマッチングで識別
+- **タイムスタンプ抽出**: 試合開始時刻をHH:MM:SS形式でCSV出力（メイン機能）
+- **キャッシュ機能**: 2回目以降の実行を高速化
+- **GitHub Actions**: 動画DL → 解析 → vsmobile-kgy へタイムスタンプ自動送信（`analyze.yml`）
+- **[実験的] OCR解析**: `--with-ocr` フラグでプレイヤー名・機体名・勝敗も抽出（精度は保証されない）
 
 ---
 
 ## 技術スタック
-- 言語: Python 3.13.5  
-- OCRエンジン: [Tesseract OCR](https://github.com/tesseract-ocr/tesseract)  
-- 主要ライブラリ: OpenCV, pytesseract, NumPy, pandas  
+
+- 言語: Python 3.13.5
+- OCRエンジン: [Tesseract OCR](https://github.com/tesseract-ocr/tesseract)
+- 主要ライブラリ: OpenCV, pytesseract, NumPy, pandas, RapidFuzz, tqdm
 
 ---
 
 ## 導入方法
 
 ### 1. リポジトリを取得
+
 ```bash
-git clone https://github.com/yourname/exvs2ib-replay-parser-kgy.git
+git clone https://github.com/sp8783/exvs2ib-replay-parser-kgy.git
 ```
 
 ### 2. 必要なライブラリをインストール
+
 ```bash
 pip install -r requirements.txt
 ```
 
 ### 3. Tesseractをインストール
-- macOS:`brew install tesseract`
-- Ubuntu: `sudo apt-get install tesseract-ocr`
+
+- macOS: `brew install tesseract`
+- Ubuntu: `sudo apt-get install tesseract-ocr tesseract-ocr-jpn`
 - Windows: [Tesseract公式ページ](https://github.com/UB-Mannheim/tesseract/wiki) からインストーラを利用
 
 ---
 
-## 使用例
-動画ファイルを指定して解析を実行します：
+## 使用方法
+
+### タイムスタンプ抽出（デフォルト）
+
 ```bash
 python main.py --input data/video.mp4
 ```
-処理結果は `output/results/` に CSV として保存されます。
+
+処理結果は `output/results/timestamps_{動画名}.csv` に保存されます。
+
+### 設定ファイルを指定する場合
+
+```bash
+python main.py --input data/video.mp4 --config config/config.yaml
+```
+
+### [実験的] プレイヤー名・機体名・勝敗も抽出
+
+```bash
+python main.py --input data/video.mp4 --with-ocr
+```
+
+> **注意**: OCR精度は保証されません。プレイヤー名・機体名の誤認識が発生することがあります。
+
+---
+
+## GitHub Actions による自動解析
+
+`analyze.yml` ワークフローを使うと、YouTube配信アーカイブのURLを指定するだけで、動画DL → 解析 → vsmobile-kgy へのタイムスタンプ自動送信が実行されます。
+
+**必要なシークレット:**
+- `VSMOBILE_FOR_KGY_API_URL` — vsmobile-kgy のベースURL
+- `VSMOBILE_FOR_KGY_API_TOKEN` — 認証トークン
+- `YOUTUBE_COOKIES` — YouTube認証が必要な場合のクッキー（任意）
 
 ---
 
 ## ファイル構成
+
 ```plaintext
 exvs2ib-replay-parser-kgy/
 ├── main.py                          # メインエントリーポイント
@@ -67,33 +101,33 @@ exvs2ib-replay-parser-kgy/
 │   └── unit_names.csv               # 機体名候補DB
 ├── output/
 │   ├── cache/                       # キャッシュ
-│   ├── frames/                      # 抽出フレーム
+│   ├── frames/                      # 抽出フレーム（matching/result のみ保存）
 │   └── results/                     # CSV出力
-├── src/ ...                         # 実装モジュール
-├── templates/ ...                   # 判定用テンプレート画像
-└── tools/ ...                       # デバッグツール類
+├── src/
+│   ├── core/                        # パイプライン統括・設定管理
+│   ├── video/                       # 動画フレーム抽出
+│   ├── screen/                      # 画面種別分類
+│   ├── processing/                  # 試合結果抽出
+│   ├── ocr/                         # OCR処理（実験的）
+│   └── util/                        # キャッシュ・I/O・画像処理
+├── templates/                       # テンプレートマッチング用画像（vs/win/lose）
+└── tools/                           # デバッグ・可視化ツール
 ```
 
 ---
 
-## 既知の課題
-⚠️ 現在のOCR精度は実用レベルに達していません。改善が必要です。
-- プレイヤー名・機体名の誤認識が約2.5%発生
-- 数字を含む名称（ex. 試作2号機）、特殊文字（ex. ν）、漢字（ex. 神、騎士）で精度低下
-
----
-
-## 今後の開発予定
-- プレイヤー名・機体名の検出精度向上
-- リアルタイム解析対応
-- Webアプリへの統合
-
----
-
 ## バージョン情報
-- **v0.1.0 (初期実装)**  
-  - 動画フレーム抽出（デフォルトは2秒間隔）  
-  - 画面判定（マッチング/リザルト画面）  
-  - OCRによるプレイヤー名・機体名の抽出  
-  - CSV出力とキャッシュ機能  
-  - デバッグツール（画面判定・OCR結果・ROI選択）  
+
+### v1.0.0
+
+- タイムスタンプ抽出をメイン機能として整理（`--with-ocr` なしがデフォルト）
+- コードリファクタリング: グローバル依存解消・デッドコード削除・型ヒント追加
+- GitHub Actions ワークフロー: YouTube DL → 解析 → vsmobile-kgy 自動送信
+
+### v0.1.0（初期実装）
+
+- 動画フレーム抽出（デフォルトは2秒間隔）
+- 画面判定（マッチング/リザルト画面）
+- OCRによるプレイヤー名・機体名の抽出
+- CSV出力とキャッシュ機能
+- デバッグツール（画面判定・OCR結果・ROI選択）
