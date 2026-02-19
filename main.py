@@ -1,7 +1,8 @@
 import argparse
 from src.core.pipeline import Pipeline
 
-def main():
+
+def main() -> None:
     """
     コマンドライン引数を受け取り、パイプライン処理を実行する。
     """
@@ -14,6 +15,7 @@ def main():
 
     pipeline = Pipeline(args.input, args.config, with_ocr=args.with_ocr)
     pipeline.run_pipeline()
+
 
 if __name__ == "__main__":
     main()
