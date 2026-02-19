@@ -49,6 +49,7 @@ jobs:
             -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" \
             --merge-output-format mp4 \
             --js-runtimes node \
+            --remote-components ejs:github \
             -o "broadcast.mp4" \
             $COOKIES_OPT \
             "${{ inputs.broadcast_url }}"
