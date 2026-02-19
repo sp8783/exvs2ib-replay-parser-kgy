@@ -47,7 +47,7 @@ jobs:
             COOKIES_OPT=""
           fi
           yt-dlp \
-            -f "bestvideo[height<=720][ext=mp4]/bestvideo[height<=720]/bestvideo[ext=mp4]/bestvideo" \
+            -f "bestvideo[height<=480][ext=mp4]/bestvideo[height<=480]/bestvideo[ext=mp4]/bestvideo" \
             --merge-output-format mp4 \
             --js-runtimes node \
             --remote-components ejs:github \
