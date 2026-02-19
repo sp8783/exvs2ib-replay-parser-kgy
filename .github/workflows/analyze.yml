@@ -36,6 +36,7 @@ jobs:
         run: pip install yt-dlp
 
       - name: 動画をダウンロード
+        id: download
         env:
           YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
         run: |
@@ -50,12 +51,19 @@ jobs:
             --merge-output-format mp4 \
             --js-runtimes node \
             --remote-components ejs:github \
-            -o "broadcast.mp4" \
+            -o "broadcast.%(ext)s" \
             $COOKIES_OPT \
             "${{ inputs.broadcast_url }}"
+          VIDEO_FILE=$(ls broadcast.* | head -1)
+          echo "=== ダウンロードされたファイル ==="
+          ls -lh broadcast.*
+          echo "video_file=$VIDEO_FILE" >> $GITHUB_OUTPUT
 
       - name: 解析を実行
-        run: python main.py --input broadcast.mp4 --mode timestamps
+        run: |
+          VIDEO_FILE="${{ steps.download.outputs.video_file }}"
+          echo "解析対象ファイル: $VIDEO_FILE ($(du -h "$VIDEO_FILE" | cut -f1))"
+          python main.py --input "$VIDEO_FILE" --mode timestamps
 
       - name: タイムスタンプを確認
         run: |
