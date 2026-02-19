@@ -36,11 +36,21 @@ jobs:
         run: pip install yt-dlp
 
       - name: 動画をダウンロード
+        env:
+          YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
         run: |
+          if [ -n "$YOUTUBE_COOKIES" ]; then
+            echo "$YOUTUBE_COOKIES" > cookies.txt
+            COOKIES_OPT="--cookies cookies.txt"
+          else
+            COOKIES_OPT=""
+          fi
           yt-dlp \
             -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" \
             --merge-output-format mp4 \
+            --js-runtimes nodejs \
             -o "broadcast.mp4" \
+            $COOKIES_OPT \
             "${{ inputs.broadcast_url }}"
 
       - name: 解析を実行
