@@ -14,12 +14,12 @@ class Pipeline:
     各処理は専用クラスに委譲し、全体のフローを管理する。
     """
 
-    def __init__(self, video_path, config_path, mode="full"):
+    def __init__(self, video_path, config_path, with_ocr=False):
         self.config = Config(config_path)
         self.config_path = config_path
         self.video_path = video_path
         self.video_basename = os.path.splitext(os.path.basename(video_path))[0]
-        self.mode = mode
+        self.with_ocr = with_ocr
 
         # ディレクトリ設定
         self.frames_dir = os.path.join(self.config.get("output", "frames", default="output/frames"), self.video_basename)
@@ -30,7 +30,7 @@ class Pipeline:
         self.cache_manager = CacheManager(self.cache_dir, self.video_basename)
         self.screen_detector = ScreenDetector(config_path)
         self.frame_interval = self.config.get("video", "frame_interval")
-        if self.mode == "full":
+        if self.with_ocr:
             self.match_extractor = MatchExtractor(self.frame_interval)
 
         self._prepare_output_dirs()
@@ -49,15 +49,14 @@ class Pipeline:
         # 1. フレーム抽出＋画面判定（統合フロー、キャッシュ対応）
         screens, match_count = self._extract_and_classify_with_cache()
 
-        if self.mode == "timestamps":
-            # タイムスタンプのみ出力
+        if self.with_ocr:
+            # 試合結果抽出（実験的）
+            results = self.match_extractor.extract_match_results(screens, match_count)
+            self._save_results_to_csv(results)
+        else:
+            # タイムスタンプのみ出力（デフォルト）
             timestamps = self._extract_timestamps(screens)
             self._save_timestamps_to_csv(timestamps)
-        else:
-            # 3. 試合結果抽出
-            results = self.match_extractor.extract_match_results(screens, match_count)
-            # 4. CSV出力
-            self._save_results_to_csv(results)
 
     def _extract_frames_with_cache(self):
         """
