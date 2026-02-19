@@ -1,7 +1,8 @@
 import re
 from rapidfuzz import fuzz
 
-def get_char_type(ch):
+
+def get_char_type(ch: str) -> str:
     """
     1文字の文字種を判定して返す（K:漢字, C:カタカナ, E:英字, N:数字, S:その他）。
     """
@@ -16,14 +17,16 @@ def get_char_type(ch):
     else:
         return "S"
 
-def get_pattern(s):
+
+def get_pattern(s: str) -> str:
     """
     文字列sの各文字の文字種パターンを連結して返す。
     例: "騎士ガンダム" → "KKCCCC", "νガンダム" → "SCCCC"
     """
     return "".join(get_char_type(ch) for ch in s if ch.strip())
 
-def matching_scorer_for_unit_name(a, b, **kwargs):
+
+def matching_scorer_for_unit_name(a: str, b: str, **kwargs) -> float:
     """
     機体名用スコアリング関数。
     文字列類似度（70%）＋文字種パターン一致度（30%）－長さペナルティでスコアを算出。
@@ -37,7 +40,8 @@ def matching_scorer_for_unit_name(a, b, **kwargs):
     length_penalty = abs(len(a) - len(b)) * 10
     return score_text * 0.7 + score_pattern * 0.3 - length_penalty
 
-def matching_scorer_for_player_name(a, b, **kwargs):
+
+def matching_scorer_for_player_name(a: str, b: str, **kwargs) -> float:
     """
     プレイヤー名用スコアリング関数。
     文字列類似度－長さペナルティでスコアを算出。

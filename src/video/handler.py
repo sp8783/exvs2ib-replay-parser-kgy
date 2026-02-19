@@ -1,10 +1,12 @@
 import cv2
 import os
+import numpy as np
 from tqdm import tqdm
 from src.util.io import ensure_dir
 from src.screen.classifier import ScreenClassifier
 
-def open_video(video_path):
+
+def open_video(video_path: str) -> cv2.VideoCapture:
     """
     動画ファイルを開いてcv2.VideoCaptureオブジェクトを返す。
     開けない場合はFileNotFoundErrorを投げる。
@@ -14,13 +16,15 @@ def open_video(video_path):
         raise FileNotFoundError(f"動画ファイルが開けません: {video_path}")
     return cap
 
-def get_fps(cap):
+
+def get_fps(cap: cv2.VideoCapture) -> float:
     """
     動画のFPS（フレームレート）を取得する。
     """
     return cap.get(cv2.CAP_PROP_FPS)
 
-def save_frame(frame, output_dir, idx):
+
+def save_frame(frame: np.ndarray, output_dir: str, idx: int) -> str:
     """
     フレーム画像を指定ディレクトリに保存し、保存パスを返す。
     """
@@ -28,7 +32,8 @@ def save_frame(frame, output_dir, idx):
     cv2.imwrite(frame_path, frame)
     return frame_path
 
-def extract_frames(video_path, frame_interval_sec, output_dir):
+
+def extract_frames(video_path: str, frame_interval_sec: float, output_dir: str) -> list[str]:
     """
     動画ファイルから指定間隔ごとにフレーム画像を抽出し、保存パスのリストを返す。
     """
@@ -60,11 +65,16 @@ def extract_frames(video_path, frame_interval_sec, output_dir):
     return saved_paths
 
 
-def extract_and_classify_frames(video_path, frame_interval_sec, output_dir, config_path):
+def extract_and_classify_frames(
+    video_path: str,
+    frame_interval_sec: float,
+    output_dir: str,
+    config_path: str,
+) -> tuple[list[dict], int, list[dict]]:
     """
     動画からフレームを抽出しつつ画面判定を行い、
     matching/result フレームのみディスクに保存する。
-    戻り値: (screens, match_count) — ScreenDetector.detect_screens() と同じ形式
+    戻り値: (screens, match_count, log_rows)
     """
     ensure_dir(output_dir)
     classifier = ScreenClassifier(config_path)

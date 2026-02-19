@@ -2,11 +2,11 @@ import os
 import pandas as pd
 from src.core.config import Config
 from src.processing.match_extractor import MatchExtractor
-from src.processing.screen_detector import ScreenDetector, save_screen_log
-from src.util.io import ensure_dir, save_dataframe_csv
+from src.util.io import ensure_dir, save_dataframe_csv, save_screen_log
 from src.util.cache import CacheManager
 from src.util.timestamp import calculate_timestamp
-from src.video.handler import extract_frames, extract_and_classify_frames
+from src.video.handler import extract_and_classify_frames
+
 
 class Pipeline:
     """
@@ -14,7 +14,7 @@ class Pipeline:
     各処理は専用クラスに委譲し、全体のフローを管理する。
     """
 
-    def __init__(self, video_path, config_path, with_ocr=False):
+    def __init__(self, video_path: str, config_path: str, with_ocr: bool = False) -> None:
         self.config = Config(config_path)
         self.config_path = config_path
         self.video_path = video_path
@@ -28,21 +28,20 @@ class Pipeline:
 
         # 各種マネージャー・プロセッサーの初期化
         self.cache_manager = CacheManager(self.cache_dir, self.video_basename)
-        self.screen_detector = ScreenDetector(config_path)
         self.frame_interval = self.config.get("video", "frame_interval")
         if self.with_ocr:
-            self.match_extractor = MatchExtractor(self.frame_interval)
+            self.match_extractor = MatchExtractor(self.frame_interval, self.config)
 
         self._prepare_output_dirs()
-    
-    def _prepare_output_dirs(self):
+
+    def _prepare_output_dirs(self) -> None:
         """
         必要なディレクトリを作成する。
         """
         ensure_dir(self.frames_dir)
         ensure_dir(self.results_dir)
-    
-    def run_pipeline(self):
+
+    def run_pipeline(self) -> None:
         """
         パイプライン全体を実行する。
         """
@@ -58,29 +57,7 @@ class Pipeline:
             timestamps = self._extract_timestamps(screens)
             self._save_timestamps_to_csv(timestamps)
 
-    def _extract_frames_with_cache(self):
-        """
-        フレーム抽出（キャッシュ対応）
-        """
-        if self.cache_manager.has_frames_cache():
-            return self.cache_manager.load_frames_cache()
-        
-        frame_paths = extract_frames(self.video_path, self.config.get("video", "frame_interval"), self.frames_dir)
-        self.cache_manager.save_frames_cache(frame_paths)
-        return frame_paths
-    
-    def _detect_screens_with_cache(self, frame_paths):
-        """
-        画面検出（キャッシュ対応）
-        """
-        if self.cache_manager.has_screens_cache():
-            return self.cache_manager.load_screens_cache()
-
-        screens, match_count = self.screen_detector.detect_screens(frame_paths, self.results_dir)
-        self.cache_manager.save_screens_cache(screens, match_count)
-        return screens, match_count
-
-    def _extract_and_classify_with_cache(self):
+    def _extract_and_classify_with_cache(self) -> tuple:
         """
         フレーム抽出＋画面判定の統合フロー（キャッシュ対応）。
         screens_cache があればそのまま使い、なければ統合処理を実行する。
@@ -98,7 +75,7 @@ class Pipeline:
         self.cache_manager.save_screens_cache(screens, match_count)
         return screens, match_count
 
-    def _extract_timestamps(self, screens):
+    def _extract_timestamps(self, screens: list[dict]) -> list[dict]:
         """
         画面判定結果から matching → result の遷移を検出し、
         各試合の最初の matching フレームのタイムスタンプを返す。
@@ -129,7 +106,7 @@ class Pipeline:
 
         return timestamps
 
-    def _save_timestamps_to_csv(self, timestamps):
+    def _save_timestamps_to_csv(self, timestamps: list[dict]) -> None:
         """
         試合開始タイムスタンプをCSVファイルに保存する。
         """
@@ -138,7 +115,7 @@ class Pipeline:
         save_dataframe_csv(dataframe, output_path)
         print(f"タイムスタンプを {output_path} に保存しました。")
 
-    def _save_results_to_csv(self, results):
+    def _save_results_to_csv(self, results: list[dict]) -> None:
         """
         試合結果をCSVファイルに保存する。
         """

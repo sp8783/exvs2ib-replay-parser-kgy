@@ -1,6 +1,8 @@
 import cv2
+import numpy as np
 from src.core.config import Config
 from src.util.image import resize_to_template, roi_ratio_to_absolute
+
 
 class ScreenClassifier:
     """
@@ -8,7 +10,7 @@ class ScreenClassifier:
     設定ファイルからテンプレート画像とROI情報を取得し、初期化時にテンプレート画像を読み込む。
     """
 
-    def __init__(self, config_path="config/config.yaml"):
+    def __init__(self, config_path: str = "config/config.yaml") -> None:
         """
         設定ファイルからテンプレート画像パス・ROI情報を取得し、テンプレート画像を事前に読み込む。
         """
@@ -20,7 +22,7 @@ class ScreenClassifier:
         self.win_template = self._load_template(self.template_config.get("win"))
         self.lose_template = self._load_template(self.template_config.get("lose"))
 
-    def _load_template(self, template_path):
+    def _load_template(self, template_path: str | None) -> np.ndarray | None:
         """
         指定パスのテンプレート画像をグレースケールで読み込む。
         """
@@ -28,13 +30,7 @@ class ScreenClassifier:
             return cv2.imread(template_path, cv2.IMREAD_GRAYSCALE)
         return None
 
-    def _roi_to_abs(self, img, roi_ratio):
-        """
-        ROIの割合指定を絶対座標に変換する。
-        """
-        return roi_ratio_to_absolute(img, roi_ratio)
-
-    def match_template(self, img, template, roi=None):
+    def match_template(self, img: np.ndarray, template: np.ndarray, roi: tuple | None = None) -> bool:
         """
         指定したROI領域でテンプレートマッチングを行い、類似度が閾値以上ならTrueを返す。
         """
@@ -48,7 +44,7 @@ class ScreenClassifier:
         _, max_val, _, _ = cv2.minMaxLoc(res)
         return max_val >= threshold
 
-    def classify(self, img):
+    def classify(self, img: np.ndarray) -> str:
         """
         画面種別（matching, result_win, result_lose, unknown）を判定して返す。
         """
@@ -56,10 +52,10 @@ class ScreenClassifier:
         win_roi = self.roi_config.get("win")
         lose_roi = self.roi_config.get("lose")
 
-        if self.vs_template is not None and vs_roi and self.match_template(img, self.vs_template, self._roi_to_abs(img, vs_roi)):
+        if self.vs_template is not None and vs_roi and self.match_template(img, self.vs_template, roi_ratio_to_absolute(img, vs_roi)):
             return "matching"
-        if self.win_template is not None and win_roi and self.match_template(img, self.win_template, self._roi_to_abs(img, win_roi)):
+        if self.win_template is not None and win_roi and self.match_template(img, self.win_template, roi_ratio_to_absolute(img, win_roi)):
             return "result_win"
-        if self.lose_template is not None and lose_roi and self.match_template(img, self.lose_template, self._roi_to_abs(img, lose_roi)):
+        if self.lose_template is not None and lose_roi and self.match_template(img, self.lose_template, roi_ratio_to_absolute(img, lose_roi)):
             return "result_lose"
         return "other"
