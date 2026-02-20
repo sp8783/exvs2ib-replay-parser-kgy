@@ -134,3 +134,16 @@ jobs:
               print(f"❌ 送信失敗 (HTTP {e.code}): {e.read().decode()}")
               sys.exit(1)
           EOF
+
+      - name: 失敗を vsmobile-kgy API に通知
+        if: failure()
+        env:
+          API_URL: ${{ secrets.VSMOBILE_FOR_KGY_API_URL }}
+          API_TOKEN: ${{ secrets.VSMOBILE_FOR_KGY_API_TOKEN }}
+          EVENT_ID: ${{ inputs.event_id }}
+        run: |
+          curl -s -X POST \
+            -H "Authorization: Bearer $API_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"error\": \"GitHub Actions ワークフローが失敗しました\"}" \
+            "$API_URL/api/events/$EVENT_ID/notify_failure"
